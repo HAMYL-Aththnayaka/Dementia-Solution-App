@@ -1,8 +1,8 @@
 MemoryMate — AI-Powered Cognitive Support App for Dementia Care
 Version: 1.0
-Author: [Your Name]
-Date: [Insert Date]
-Type: Final Year Project (B.Sc. Computer Science)
+Author: Yasas Lasith
+Date: 2026-06-20
+Type: Final Year Project (B.Sc. information Technology )
 
 ---
 
