@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "MemoryMate",
+    "slug": "memorymate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.memorymate.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "MemoryMate uses the camera to recognize familiar faces.",
+        "NSLocationWhenInUseUsageDescription": "MemoryMate needs your location to check if you are within a safe zone.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "MemoryMate needs background location to alert your caregiver if you leave your safe zone.",
+        "NSMicrophoneUsageDescription": "MemoryMate uses the microphone to listen to your voice commands."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "package": "com.memorymate.app",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECORD_AUDIO",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        { "cameraPermission": "MemoryMate uses the camera to recognize familiar faces." }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "MemoryMate needs background location to alert your caregiver if you leave your safe zone."
+        }
+      ],
+      "expo-notifications"
+    ]
+  }
+}

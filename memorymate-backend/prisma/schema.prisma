@@ -1,0 +1,166 @@
+// This is your Prisma schema file.
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // SQLite for local development — easy, no setup required
+  // Switch to postgresql for production by changing provider and DATABASE_URL
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ─── Users ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("PATIENT") // PATIENT | CAREGIVER | ADMIN
+  fcmToken     String?  // Firebase push token, set when app registers
+  inviteCode   String?  @unique // Used for patient-caregiver linking
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations — as patient
+  patientLinks   PatientCaregiverLink[] @relation("PatientLinks")
+  knownFaces     KnownFace[]
+  routines       Routine[]
+  safeZones      SafeZone[]
+  zoneEvents     ZoneEvent[]
+  activityLogs   ActivityLog[]
+
+  // Relations — as caregiver
+  caregiverLinks      PatientCaregiverLink[] @relation("CaregiverLinks")
+  createdFaces        KnownFace[]            @relation("FaceCreatedBy")
+  createdRoutines     Routine[]              @relation("RoutineCreatedBy")
+  createdZones        SafeZone[]             @relation("ZoneCreatedBy")
+  notifications       Notification[]
+}
+
+// ─── Patient–Caregiver Link ───────────────────────────────────────────────────
+
+model PatientCaregiverLink {
+  id           String   @id @default(cuid())
+  patientId    String
+  caregiverId  String
+  relationship String?  // e.g. "daughter", "son", "professional carer"
+  status       String   @default("PENDING") // PENDING | ACCEPTED
+  createdAt    DateTime @default(now())
+
+  patient   User @relation("PatientLinks",   fields: [patientId],   references: [id], onDelete: Cascade)
+  caregiver User @relation("CaregiverLinks", fields: [caregiverId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, caregiverId])
+}
+
+// ─── Known Faces ─────────────────────────────────────────────────────────────
+
+model KnownFace {
+  id              String   @id @default(cuid())
+  patientId       String
+  createdById     String
+  name            String
+  relationship    String   // e.g. "daughter", "doctor"
+  photoUrl        String?  // relative path to uploaded photo
+  // Embedding stored as JSON string: "[0.12, 0.34, ...]"
+  // On-device TFLite will use this for cosine similarity matching
+  embeddingVector String?
+  createdAt       DateTime @default(now())
+
+  patient    User @relation(fields: [patientId],   references: [id], onDelete: Cascade)
+  createdBy  User @relation("FaceCreatedBy", fields: [createdById], references: [id])
+}
+
+// ─── Routines ─────────────────────────────────────────────────────────────────
+
+model Routine {
+  id          String   @id @default(cuid())
+  patientId   String
+  createdById String
+  title       String
+  description String?
+  // Simple schedule: store as "HH:MM" for daily, or a simple cron string
+  scheduleTime String  // e.g. "08:00" for 8am daily
+  type        String   @default("OTHER") // MEDICATION | APPOINTMENT | MEAL | OTHER
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patient    User          @relation(fields: [patientId],   references: [id], onDelete: Cascade)
+  createdBy  User          @relation("RoutineCreatedBy", fields: [createdById], references: [id])
+  logs       RoutineLog[]
+}
+
+model RoutineLog {
+  id            String    @id @default(cuid())
+  routineId     String
+  scheduledTime DateTime
+  status        String    @default("PENDING") // PENDING | COMPLETED | MISSED | SNOOZED
+  respondedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+}
+
+// ─── Safe Zones ───────────────────────────────────────────────────────────────
+
+model SafeZone {
+  id          String   @id @default(cuid())
+  patientId   String
+  createdById String
+  name        String
+  // Store as simple circle: center lat/lng + radius in meters
+  centerLat   Float
+  centerLng   Float
+  radiusMeters Float    @default(200)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patient    User        @relation(fields: [patientId],   references: [id], onDelete: Cascade)
+  createdBy  User        @relation("ZoneCreatedBy", fields: [createdById], references: [id])
+  zoneEvents ZoneEvent[]
+}
+
+model ZoneEvent {
+  id        String   @id @default(cuid())
+  patientId String
+  zoneId    String
+  eventType String   // ENTER | EXIT
+  lat       Float?
+  lng       Float?
+  timestamp DateTime @default(now())
+
+  patient User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  zone    SafeZone @relation(fields: [zoneId],    references: [id], onDelete: Cascade)
+}
+
+// ─── Activity Log ─────────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  patientId String
+  eventType String   // RECOGNITION | REMINDER | ZONE_EVENT | COMPANION_QUERY
+  payload   String   // JSON string with event details
+  timestamp DateTime @default(now())
+
+  patient User @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id         String   @id @default(cuid())
+  caregiverId String
+  type       String   // ZONE_EXIT | REMINDER_MISSED | SYSTEM
+  title      String
+  message    String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  caregiver User @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+}
